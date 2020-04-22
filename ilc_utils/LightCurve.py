@@ -1,5 +1,9 @@
 import lightkurve as lk
 class LC:
+    '''
+    Class to store all of the information needed to handle one light curve file
+    '''
+
     def __init__(self):
         self.data = None
         self.time = None
@@ -19,6 +23,9 @@ class LC:
         self.name = n
 
     def init_lc(self):
+        '''
+        Initializes a lightkurve LightCurve object based on the previously entered time and flux/magnitude data
+        '''
         self.lc = lk.LightCurve(time=self.time, flux=self.data)
     
     def get_periodogram(self):
