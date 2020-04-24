@@ -28,9 +28,6 @@ def set_properties(axes, title=None, xlabel=None, ylabel=None):
         axes.set_ylabel(ylabel)
     return axes
 
-def plot_raw():
-    print("unimplemented")
-
 def plot_periodogram(ax, p, highlight=None):
     '''
     Plots a periodogram from a lightkurve.Periodogram object to the given axes

@@ -1,33 +1,45 @@
 import importlib
-import matplotlib.pyplot as plt
-import numpy as np
 from pathlib import Path
+from cmd import Cmd
 
 from ilc_utils import CLI_utilities
-from ilc_utils import LightCurve
 from ilc_utils import plot_utils
 
-from cmd import Cmd
+import numpy as np
+import matplotlib.pyplot as plt
+import lightkurve as lk
 
 plt.ion()
 
 params = CLI_utilities.query_user_for_initial_arguments()
 
 class lc_prompt(Cmd):
-    files = []
-    openned = False
+
+    # Cmd instance variables
     prompt = 'lc> '
     intro = "Welcome! Type intro to get a quick guide to how to use this program. \nType ? to list commands"
     
+    # I/O
+    files = []
+    openned = False
+    output = ["ID, Period (d), Epoch (HJD)"]
+
+    # Current LC info
+    name = None
+    data = None
+    time = None
+    period = None
+    epoch = None
+    min_t = .5
+    max_t = 3
+    freq = 1000
+
     def __init__(self):
         Cmd.__init__(self)
-        CLI_utilities.cls()
-        CLI_utilities.set_color(3)
+
+        # Set up the axes for plotting
         self.fig, self.axes = plt.subplots(3,figsize=(8,10))
-        self.current_lc = LightCurve.LC()
-        self.current_period = None
-        self.current_epoch = None
-        self.output = ["ID, Period (d), Epoch (HJD)"]
+        
 
     # --- File Handling
 
@@ -44,12 +56,12 @@ class lc_prompt(Cmd):
             t, d = CLI_utilities.open_data_file(params['directory'], inp, params['data_col_name'], params['time_col_name'])
             if not params['data_in_flux']:
                 mag = (np.max(d) - d) + 10
-                self.current_lc.set_data(mag)
+                self.data = mag
             else:
-                self.current_lc.set_data(d)
-            self.current_lc.set_time(t)
-            self.current_lc.init_lc()
-            self.current_lc.set_name(inp.stem)    
+                self.data = d
+            self.time = t
+            self.initialize_lightkurve()
+            self.name = inp.stem    
             self.openned = True
             self.fig.suptitle(inp.stem)    
         except:
@@ -83,7 +95,7 @@ class lc_prompt(Cmd):
             return
         if (inp == 'c'):
             ax.clear()
-        ax.scatter(self.current_lc.time, self.current_lc.data)
+        ax.scatter(self.time, self.data)
         plot_utils.set_properties(ax, xlabel=params['time_col_name'], ylabel="Flux" if params['data_in_flux'] else "Magnitude")
         plt.draw()
 
@@ -99,10 +111,10 @@ class lc_prompt(Cmd):
             return
         if (inp == 'c'):
             ax.clear()
-        p = self.current_lc.get_periodogram()
+        p = self.get_periodogram()
         plot_utils.plot_periodogram(ax, p)
-        self.current_period = p.period_at_max_power
-        self.current_epoch = p.transit_time_at_max_power
+        self.period = p.period_at_max_power
+        self.epoch = p.transit_time_at_max_power
         plt.draw()
     
     def help_pplot(self):
@@ -117,8 +129,8 @@ class lc_prompt(Cmd):
             return
         if (inp == 'c'):
             ax.clear()
-        p = self.current_lc.get_periodogram()
-        plot_utils.plot_phase_folded(ax, self.current_lc.lc, p.period_at_max_power.value, (p.transit_time_at_max_power + self.current_lc.time[0]))
+        p = self.get_periodogram()
+        plot_utils.plot_phase_folded(ax, self.lc, p.period_at_max_power.value, (p.transit_time_at_max_power + self.time[0]))
 
     def help_fplot(self):
         print("Plots a phase-folded version of the current light curve")
@@ -143,18 +155,18 @@ class lc_prompt(Cmd):
             return
         
         self.axes[1].clear()
-        p = self.current_lc.get_periodogram()
+        p = self.get_periodogram()
         max_p =p.period_at_max_power.value
         new_p = max_p * float(inp)
 
         plot_utils.plot_periodogram(self.axes[1], p, highlight=new_p)
 
         self.axes[2].clear()
-        plot_utils.plot_phase_folded(self.axes[2], self.current_lc.lc, new_p, p.transit_time_at_max_power)
+        plot_utils.plot_phase_folded(self.axes[2], self.lc, new_p, p.transit_time_at_max_power)
 
         plt.draw()
 
-        self.current_period = new_p
+        self.period = new_p
     
     def help_h(self):
         print("Selects the given harmonic as the period to phase-fold over")
@@ -163,7 +175,7 @@ class lc_prompt(Cmd):
 
     def do_mint(self, inp):
         if CLI_utilities.is_int(inp):
-            self.current_lc.min_t = float(inp)
+            self.min_t = float(inp)
         else:
             print("Please enter a float")
 
@@ -172,7 +184,7 @@ class lc_prompt(Cmd):
 
     def do_maxt(self, inp):
         if CLI_utilities.is_float(inp):
-            self.current_lc.max_t = float(inp)
+            self.max_t = float(inp)
         else:
             print("Please enter a float")
         
@@ -182,9 +194,9 @@ class lc_prompt(Cmd):
     # --- Output
 
     def do_scp(self, inp):
-        print("Period: " + str(self.current_period))
-        print("Epoch: " + str(self.current_epoch + self.current_lc.time[0]))
-        self.output.append(str(self.current_lc.name) + ", " + str(self.current_period) + ", " + str(self.current_epoch + self.current_lc.time[0]))
+        print("Period: " + str(self.period))
+        print("Epoch: " + str(self.epoch + self.time[0]))
+        self.output.append(str(self.name) + ", " + str(self.period) + ", " + str(self.epoch + self.time[0]))
 
     def help_scp(self):
         print("Save the current period and epoch to the output list")
@@ -236,6 +248,18 @@ class lc_prompt(Cmd):
     
     def help_exit(self):
         print('exit the application. Shorthand: x q Ctrl-D.')
+    
+    def preloop(self):
+        CLI_utilities.cls()
+        CLI_utilities.set_color(3)
+
+    # --- Non-Cmd functions
+
+    def initialize_lightkurve(self):
+        self.lc = lk.LightCurve(time=self.time, flux=self.data)
+
+    def get_periodogram(self):
+        return self.lc.to_periodogram(method='bls', minimum_period=self.min_t, maximum_period=self.max_t, frequency_factor=self.freq)
  
 if __name__ == '__main__':
     lc_prompt().cmdloop()
