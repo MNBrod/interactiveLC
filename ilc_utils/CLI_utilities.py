@@ -1,20 +1,23 @@
 import os
 import importlib
 import pickle
-import numpy as np
 from pathlib import Path
 
+import numpy as np
 from astropy.table import Table
 
+__all___ = ['query_user_for_initial_arguments', 'open_data_file', 'is_int', 'is_float', 'cls', 'set_color']
+
 def query_user_for_initial_arguments():
-    '''
+    """
     Gathers initial startup information from the user
 
     Returns
     -------
     output: dict
         All of the data collected from the user
-    '''
+    """
+
     if os.path.exists("interactive_lc.init"):
         inp = input("Read from previous session? (y/n) ")
         while (inp != "y" and inp != "n"):
@@ -53,7 +56,7 @@ def query_user_for_initial_arguments():
     return output
 
 def open_data_file(filepath, filename, data_column_name, time_column_name):
-    '''
+    """
     Opens a data file at the specified location and extracts the information given in the specified column headers
 
     Parameters
@@ -73,7 +76,8 @@ def open_data_file(filepath, filename, data_column_name, time_column_name):
         Times contained in the file
     data: array of float
         Fluxes/Magnitudes contained in the file
-    '''
+    """
+
     try:
         t = Table.read(filepath / filename)
         try:
@@ -89,7 +93,7 @@ def open_data_file(filepath, filename, data_column_name, time_column_name):
         raise ValueError("Invalid file location: " + str(filepath))
 
 def is_int(val):
-    '''
+    """
     Determines if the input value can be cast to an integer
 
     Parameters
@@ -101,7 +105,8 @@ def is_int(val):
     -------
     is_int: bool
         True if the input can be cast to an int, false otherwise
-    '''
+    """
+
     try:
         num = int(val)
     except ValueError:
@@ -109,7 +114,7 @@ def is_int(val):
     return True
 
 def is_float(val):
-    '''
+    """
     Determines if the input value can be cast to a float
 
     Parameters
@@ -121,7 +126,8 @@ def is_float(val):
     -------
     is_int: bool
         True if the input can be cast to an float, False otherwise
-    '''
+    """
+
     try:
         num = float(val)
     except ValueError:
@@ -129,20 +135,19 @@ def is_float(val):
     return True
 
 def cls():
-    '''
-    Clears the command line on UNIX/Windows
-    '''
+    """Clears the command line on UNIX/Windows"""
     os.system('cls' if os.name=='nt' else 'clear')
 
 def set_color(c):
-    '''
+    """
     If the user is on a windows command prompt, changes the session's text color
 
     Parameters
     -------
     c: int
         Windows CP color to change to
-    '''
+    """
+
     if not os.name == 'nt':
         return
     if (not is_int(c)):

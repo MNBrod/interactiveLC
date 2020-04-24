@@ -1,12 +1,12 @@
-import lightkurve as lk
-import numpy as np 
 import matplotlib.pyplot as plt 
+import lightkurve as lk
 from astropy.table import Table
 from astropy import units as u
 
+__all__ = ['set_properties', 'plot_periodogram', 'plot_phase_folded']
 
 def set_properties(axes, title=None, xlabel=None, ylabel=None):
-    '''
+    """
     Sets the title, xlabel, and ylabel atributes of the given axes
 
     Parameters
@@ -19,7 +19,13 @@ def set_properties(axes, title=None, xlabel=None, ylabel=None):
         The label to be added. If none, no label is added
     ylabel: str
         The label to be added. If none, no label is added
-    '''
+    
+    Returns
+    -------
+    axes:
+        Modified matplotlib axes
+    """
+
     if title:
         axes.set_title(title)
     if xlabel:
@@ -29,7 +35,7 @@ def set_properties(axes, title=None, xlabel=None, ylabel=None):
     return axes
 
 def plot_periodogram(ax, p, highlight=None):
-    '''
+    """
     Plots a periodogram from a lightkurve.Periodogram object to the given axes
 
     Parameters
@@ -41,7 +47,8 @@ def plot_periodogram(ax, p, highlight=None):
     highlight: astropy Time
         The period to highlight on the plot. If none is given, defaults to
         highlighting the highest peak
-    '''
+    """
+
     ax.plot(p.period, p.power)
     if not highlight:
         highlight = p.period_at_max_power.value
@@ -50,7 +57,7 @@ def plot_periodogram(ax, p, highlight=None):
     set_properties(ax, ylabel="Power", xlabel="Period")
 
 def plot_phase_folded(ax, lc, period, epoch, offset=4):
-    '''
+    """
     Plots a phase-folded light curve onto the given axes
 
     Parameters
@@ -67,7 +74,8 @@ def plot_phase_folded(ax, lc, period, epoch, offset=4):
         Inverse fractional component to offset the lightcurve by. For example,
         the default value of 4 will offset the primary eclipse by 1/4 of a
         period to the left, so that both eclipses are visible
-    '''    
+    """
+
     t_0_offset = (period / offset) + epoch
     lc.fold(period, t_0_offset).scatter(ax=ax, s=5)
     set_properties(ax, ylabel="Magnitude(ish)")
