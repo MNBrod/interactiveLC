@@ -25,7 +25,9 @@ class lc_prompt(Cmd):
         CLI_utilities.set_color(3)
         self.fig, self.axes = plt.subplots(3,figsize=(8,10))
         self.current_lc = LightCurve.LC()
-
+        self.current_period = None
+        self.current_epoch = None
+        self.output = ["ID, Period (d), Epoch (HJD)"]
 
     # --- File Handling
 
@@ -33,6 +35,7 @@ class lc_prompt(Cmd):
         print("opening '{}'".format(inp))
         if (CLI_utilities.is_int(inp)):
             if self.files:
+                print("Filename: " + self.files[int(inp)].stem)
                 inp = self.files[int(inp)]
             else:
                 print("Please scan a directory before accessing files by index")
@@ -46,9 +49,9 @@ class lc_prompt(Cmd):
                 self.current_lc.set_data(d)
             self.current_lc.set_time(t)
             self.current_lc.init_lc()
-            self.current_lc.set_name(str(inp))    
+            self.current_lc.set_name(inp.stem)    
             self.openned = True
-            self.fig.suptitle(str(inp))    
+            self.fig.suptitle(inp.stem)    
         except:
             print("Error opening " + str(inp))
 
@@ -98,6 +101,8 @@ class lc_prompt(Cmd):
             ax.clear()
         p = self.current_lc.get_periodogram()
         plot_utils.plot_periodogram(ax, p)
+        self.current_period = p.period_at_max_power
+        self.current_epoch = p.transit_time_at_max_power
         plt.draw()
     
     def help_pplot(self):
@@ -113,7 +118,7 @@ class lc_prompt(Cmd):
         if (inp == 'c'):
             ax.clear()
         p = self.current_lc.get_periodogram()
-        plot_utils.plot_phase_folded(ax, self.current_lc.lc, p.period_at_max_power.value, p.transit_time_at_max_power)
+        plot_utils.plot_phase_folded(ax, self.current_lc.lc, p.period_at_max_power.value, (p.transit_time_at_max_power + self.current_lc.time[0]))
 
     def help_fplot(self):
         print("Plots a phase-folded version of the current light curve")
@@ -148,12 +153,49 @@ class lc_prompt(Cmd):
         plot_utils.plot_phase_folded(self.axes[2], self.current_lc.lc, new_p, p.transit_time_at_max_power)
 
         plt.draw()
+
+        self.current_period = new_p
     
     def help_h(self):
         print("Selects the given harmonic as the period to phase-fold over")
         print("Options:")
-        print("   [value] --- This number is multiplied with the maximum period from the BLS. For example, an entry of [2] would double the period. A value of [.5] would halve it.") 
+        print("   [value] --- This number is multiplied with the maximum period from the BLS. For example, an entry of [2] would double the period. A value of [.5] would half it.") 
 
+    def do_mint(self, inp):
+        if CLI_utilities.is_int(inp):
+            self.current_lc.min_t = float(inp)
+        else:
+            print("Please enter a float")
+
+    def help_mint(self):
+        print("Change the lower bound on the periods used in the periodogram. Setting this value below .5 can result in errors (default is .5)")
+
+    def do_maxt(self, inp):
+        if CLI_utilities.is_float(inp):
+            self.current_lc.max_t = float(inp)
+        else:
+            print("Please enter a float")
+        
+    def help_maxt(self):
+        print ("Change the upper bound on the periods used in the periodogram (default is three days)")
+    
+    # --- Output
+
+    def do_scp(self, inp):
+        print("Period: " + str(self.current_period))
+        print("Epoch: " + str(self.current_epoch + self.current_lc.time[0]))
+        self.output.append(str(self.current_lc.name) + ", " + str(self.current_period) + ", " + str(self.current_epoch + self.current_lc.time[0]))
+
+    def help_scp(self):
+        print("Save the current period and epoch to the output list")
+
+    def do_printout(self, inp):
+        for i in self.output:
+            print(i)
+    
+    def help_printout(self):
+        print("Prints all of the saved output up to this point.")
+    
     # --- Informational
 
     def do_printfiles(self, inp):
@@ -178,6 +220,7 @@ class lc_prompt(Cmd):
         print("Call 'allplot' to plot the raw data, a periodogram, and a phase-folded LC wit\n the phase extracted from the periodogram")
         print("Call 'h [number]', where [number] is the harmonic of the maximum peak you want\n to phase fold over")
         print("Open a new file, and call 'allplot c' (the c specifies that you want to clear\nthe old plot")
+    
     # --- command line specific
     def default(self, inp):
         if inp == 'x' or inp == 'q':

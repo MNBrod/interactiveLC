@@ -108,6 +108,26 @@ def is_int(val):
         return False
     return True
 
+def is_float(val):
+    '''
+    Determines if the input value can be cast to a float
+
+    Parameters
+    -------
+    val: any
+        The input to be tested
+    
+    Returns
+    -------
+    is_int: bool
+        True if the input can be cast to an float, False otherwise
+    '''
+    try:
+        num = float(val)
+    except ValueError:
+        return False
+    return True
+
 def cls():
     '''
     Clears the command line on UNIX/Windows
@@ -124,7 +144,7 @@ def set_color(c):
         Windows CP color to change to
     '''
     if not os.name == 'nt':
-        break
+        return
     if (not is_int(c)):
         raise TypeError
     os.system('color ' + str(c))

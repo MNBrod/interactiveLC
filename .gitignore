@@ -1,2 +1,8 @@
-interactive_lc.init
+*.py[cod]
+*.a
+*.o
+*.so
 __pycache__
+
+interactive_lc.init
+
